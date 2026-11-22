@@ -1,18 +1,16 @@
 # 22 November 2026 — The World in One Day
 
-[![make.fun](https://img.shields.io/badge/make.fun-news--image--20261122-blue)](https://make.fun/c/news-image-20261122)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![entry](https://img.shields.io/badge/entry-entry.png-orange)](entry.png)
+[![news-image-20261122](https://make.fun/badge/news-image-20261122.svg)](https://make.fun/c/news-image-20261122)
+[![rank](https://make.fun/badge/news-image-20261122/nexrodestro/nexro-news-20261122/rank.svg)](https://make.fun/c/news-image-20261122)
+[![reward](https://make.fun/badge/news-image-20261122/nexrodestro/nexro-news-20261122/reward.svg)](https://make.fun/c/news-image-20261122)
 
-A program that writes one image summing up Sunday 22 November 2026's
-world news: Russian missiles land in Poland (PM Tusk calls it an
-intentional provocation; Kryvyi Rih hit too), Mexico captures
-'El Chapo Isidro', a magnitude 6.9 quake shakes Peru, Estonia shuts its
-Russia border, COP31 talks run into overtime — plus four more stories
-in the ALSO TODAY strip.
+One image summing up Sunday 22 November 2026 in world news, built for the
+[news-image-20261122](https://make.fun/c/news-image-20261122) competition on
+make.fun. The lead story is Russian missiles landing in Poland, with panels
+for the capture of 'El Chapo Isidro' in Mexico, the magnitude 6.9 quake in
+Peru, Estonia closing its Russia border, and the COP31 talks running into
+overtime — plus an ALSO TODAY strip of the day's other headlines.
 
-- Competition: [news-image-20261122](https://make.fun/c/news-image-20261122) ($100 pot, 50 places)
-- Program: `main.ts` (Node 22, standard library only) — verifies `entry.png`
-  (1024×1024 PNG) and copies it to `/output/entry.png`, byte-identical on
-  every run. No network at run time.
-- Run it: `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts`
+`main.ts` (Node 22, standard library only) validates the finished 1024x1024
+poster and stages its exact bytes to the output directory, so both grader
+runs receive identical bytes.
