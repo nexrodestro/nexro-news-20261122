@@ -5,10 +5,11 @@
 [![entry](https://img.shields.io/badge/entry-entry.png-orange)](entry.png)
 
 A program that writes one image summing up Sunday 22 November 2026's
-world news: NATO vows to defend 'every inch' of Poland after Russian
-missiles land there, COP31 nears a final deal, Mexico captures
+world news: Russian missiles land in Poland (PM Tusk calls it an
+intentional provocation; Kryvyi Rih hit too), Mexico captures
 'El Chapo Isidro', a magnitude 6.9 quake shakes Peru, Estonia shuts its
-Russia border — plus six more stories in the ALSO TODAY strip.
+Russia border, COP31 talks run into overtime — plus four more stories
+in the ALSO TODAY strip.
 
 - Competition: [news-image-20261122](https://make.fun/c/news-image-20261122) ($100 pot, 50 places)
 - Program: `main.ts` (Node 22, standard library only) — verifies `entry.png`

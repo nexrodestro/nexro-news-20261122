@@ -1,72 +1,72 @@
-// nexro-news-20261122 v3 — stages the finished 22 Nov 2026 poster.
-// The poster itself is painted once (dev/draw_poster_v3.py) and kept as
-// entry.png; this program only checks that file and copies the exact
-// same bytes to the output directory. No network, no randomness, no
-// third-party imports, so two runs always write identical bytes.
+// nexro-news-20261122 v4 — stages the finished 22 Nov 2026 poster.
+//
+// v4 pairs v2's stories and wording (Poland lead, Mexico / Peru /
+// Estonia / COP31 overtime, four-item ALSO TODAY strip) with v3's
+// big-type craft (26px lead body, 25px panel body, 35-44px headlines).
+// The poster is painted once (dev/draw_poster_v4.py) and kept as entry.png;
+// this program only checks that file and stages the exact same bytes to
+// the output directory. No network, no randomness, no third-party imports,
+// so two runs always write identical bytes.
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const POSTER_PATH = join(ROOT, "entry.png");
-const EXPECTED_EDGE = 1024;
-const MAX_BYTES = 1024 * 1024;
-const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const HERE = dirname(fileURLToPath(import.meta.url));
+const POSTER = join(HERE, "entry.png");
+const EDGE_PX = 1024;
+const LIMIT = 1024 * 1024;
+const SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-function loadPoster(): Buffer {
-  if (!existsSync(POSTER_PATH)) {
-    throw new Error(`poster missing: ${POSTER_PATH}`);
+function fetchPoster(): Buffer {
+  if (!existsSync(POSTER)) {
+    throw new Error(`poster missing: ${POSTER}`);
   }
-  const bytes = readFileSync(POSTER_PATH);
-  if (bytes.length === 0 || bytes.length > MAX_BYTES) {
-    throw new Error(`poster is ${bytes.length} bytes, must be 1..${MAX_BYTES}`);
+  const data = readFileSync(POSTER);
+  if (data.length === 0 || data.length > LIMIT) {
+    throw new Error(`poster is ${data.length} bytes, must be 1..${LIMIT}`);
   }
-  return bytes;
+  return data;
 }
 
-function verifyPng(bytes: Buffer): void {
-  for (let i = 0; i < PNG_MAGIC.length; i++) {
-    if (bytes[i] !== PNG_MAGIC[i]) {
+function checkPngHead(data: Buffer): void {
+  for (let i = 0; i < SIG.length; i++) {
+    if (data[i] !== SIG[i]) {
       throw new Error("entry.png does not start with the PNG signature");
     }
   }
-  if (bytes.subarray(12, 16).toString("ascii") !== "IHDR") {
+  if (data.subarray(12, 16).toString("ascii") !== "IHDR") {
     throw new Error("first PNG chunk is not IHDR");
   }
-  const width = bytes.readUInt32BE(16);
-  const height = bytes.readUInt32BE(20);
-  if (width !== EXPECTED_EDGE || height !== EXPECTED_EDGE) {
-    throw new Error(
-      `poster is ${width}x${height}, expected ${EXPECTED_EDGE}x${EXPECTED_EDGE}`,
-    );
+  const w = data.readUInt32BE(16);
+  const h = data.readUInt32BE(20);
+  if (w !== EDGE_PX || h !== EDGE_PX) {
+    throw new Error(`poster is ${w}x${h}, expected ${EDGE_PX}x${EDGE_PX}`);
   }
 }
 
-function posterDigest(bytes: Buffer): string {
-  return createHash("sha256").update(bytes).digest("hex");
+function shaOf(data: Buffer): string {
+  return createHash("sha256").update(data).digest("hex");
 }
 
-function publish(bytes: Buffer): string {
+function stageOut(data: Buffer): string {
   const dir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
   mkdirSync(dir, { recursive: true });
   const dest = join(dir, "entry.png");
-  writeFileSync(dest, bytes);
-  const staged = readFileSync(dest);
-  if (!staged.equals(bytes)) {
-    throw new Error(`staged copy differs from ${POSTER_PATH}`);
+  writeFileSync(dest, data);
+  const back = readFileSync(dest);
+  if (!back.equals(data)) {
+    throw new Error(`staged copy differs from ${POSTER}`);
   }
   return dest;
 }
 
-function main(): void {
-  const bytes = loadPoster();
-  verifyPng(bytes);
-  const dest = publish(bytes);
-  console.log(
-    `staged ${dest} (${bytes.length} bytes, sha256 ${posterDigest(bytes)})`,
-  );
+function run(): void {
+  const data = fetchPoster();
+  checkPngHead(data);
+  const dest = stageOut(data);
+  console.log(`staged ${dest} (${data.length} bytes, sha256 ${shaOf(data)})`);
 }
 
-main();
+run();
