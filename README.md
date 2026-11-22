@@ -6,10 +6,10 @@
 
 One image summing up Sunday 22 November 2026 in world news, built for the
 [news-image-20261122](https://make.fun/c/news-image-20261122) competition on
-make.fun. The lead story is Russian missiles landing in Poland, with panels
-for the capture of 'El Chapo Isidro' in Mexico, the magnitude 6.9 quake in
-Peru, Estonia closing its Russia border, and the COP31 talks running into
-overtime — plus an ALSO TODAY strip of the day's other headlines.
+make.fun. The lead story is the capture of 'El Chapo Isidro' in Mexico, with
+panels for Iran striking in the Gulf, the COP31 talks running into overtime,
+the corrected Peru quake toll, and the UN genocide verdict on Myanmar — plus
+an ALSO TODAY strip of the day's other headlines.
 
 `main.ts` (Node 22, standard library only) validates the finished 1024x1024
 poster and stages its exact bytes to the output directory, so both grader

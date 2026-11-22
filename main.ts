@@ -1,105 +1,77 @@
-// Stager for the 22 November 2026 world-news poster.
-//
-// The poster image is painted ahead of time and stored beside this file as
-// entry.png. This script does not paint anything: it proves the stored
-// image is a well-formed 1024x1024 PNG inside the size cap, then copies
-// its exact bytes into the grader's output directory and proves the copy
-// matches byte for byte. Only the Node standard library is used, nothing
-// is fetched from the network, and nothing random happens, so repeated
-// runs always produce the same bytes.
-
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const POSTER_FILE = "entry.png";
-const POSTER_EDGE = 1024;
-const POSTER_MAX_BYTES = 1024 * 1024;
-const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const ENTRY_NAME = "entry.png";
+const MAX_BYTES = 1048576;
+const MIN_BYTES = 10000;
+const WANT_W = 1024;
+const WANT_H = 1024;
 
-function posterPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  return join(here, POSTER_FILE);
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+function repoRoot(): string {
+  return dirname(fileURLToPath(import.meta.url));
 }
 
-function readStoredPoster(): Buffer {
-  let image: Buffer;
-  try {
-    image = readFileSync(posterPath());
-  } catch {
-    throw new Error(`cannot read ${POSTER_FILE} next to this script`);
-  }
-  if (image.length < 1 || image.length > POSTER_MAX_BYTES) {
-    throw new Error(
-      `${POSTER_FILE} is ${image.length} bytes, expected 1..${POSTER_MAX_BYTES}`,
-    );
-  }
-  return image;
+function readEntry(): Buffer {
+  const p = join(repoRoot(), ENTRY_NAME);
+  if (!existsSync(p)) throw new Error(`missing ${ENTRY_NAME} in repo root`);
+  return readFileSync(p);
 }
 
-function checkPoster(image: Buffer): void {
-  // A minimal valid PNG is 8 magic bytes + a 25-byte IHDR chunk + a
-  // 12-byte IEND chunk; anything shorter cannot be a real poster.
-  if (image.length < 45) {
-    throw new Error(
-      `${POSTER_FILE} is only ${image.length} bytes, too short to be a PNG`,
-    );
+function checkPng(buf: Buffer): { w: number; h: number } {
+  if (buf.length < 33) throw new Error("poster too short to be a PNG");
+  if (!buf.subarray(0, 8).equals(PNG_SIG)) {
+    throw new Error("poster is not a PNG (bad signature)");
   }
-  for (let i = 0; i < PNG_MAGIC.length; i++) {
-    if (image[i] !== PNG_MAGIC[i]) {
-      throw new Error(`${POSTER_FILE} does not begin with the PNG magic bytes`);
-    }
+  const ihdrLen = buf.readUInt32BE(8);
+  const ihdrType = buf.toString("ascii", 12, 16);
+  if (ihdrType !== "IHDR" || ihdrLen !== 13) {
+    throw new Error("poster has no valid IHDR chunk");
   }
-  const ihdrLength = image.readUInt32BE(8);
-  if (ihdrLength !== 13) {
-    throw new Error(
-      `${POSTER_FILE} has an IHDR chunk of ${ihdrLength} bytes, expected 13`,
-    );
+  const w = buf.readUInt32BE(16);
+  const h = buf.readUInt32BE(20);
+  if (w !== WANT_W || h !== WANT_H) {
+    throw new Error(`poster is ${w}x${h}, want ${WANT_W}x${WANT_H}`);
   }
-  const firstChunk = image.subarray(12, 16).toString("latin1");
-  if (firstChunk !== "IHDR") {
-    throw new Error(`${POSTER_FILE} does not start with an IHDR chunk`);
+  if (buf.length > MAX_BYTES) {
+    throw new Error(`poster is ${buf.length} bytes, over the 1 MiB cap`);
   }
-  const width = image.readUInt32BE(16);
-  const height = image.readUInt32BE(20);
-  if (width !== POSTER_EDGE || height !== POSTER_EDGE) {
-    throw new Error(
-      `${POSTER_FILE} is ${width}x${height}, expected ${POSTER_EDGE}x${POSTER_EDGE}`,
-    );
+  if (buf.length < MIN_BYTES) {
+    throw new Error(`poster is ${buf.length} bytes, too small to be a poster`);
   }
-  const trailer = image.subarray(image.length - 12);
-  if (
-    trailer.readUInt32BE(0) !== 0 ||
-    trailer.subarray(4, 8).toString("latin1") !== "IEND"
-  ) {
-    throw new Error(`${POSTER_FILE} does not end with an IEND chunk`);
+  const tail = buf.subarray(buf.length - 12);
+  if (tail.readUInt32BE(0) !== 0 || tail.toString("ascii", 4, 8) !== "IEND") {
+    throw new Error("poster has no IEND trailer");
   }
+  return { w, h };
 }
 
-function fingerprint(image: Buffer): string {
-  return createHash("sha256").update(image).digest("hex");
+function sha256hex(buf: Buffer): string {
+  return createHash("sha256").update(buf).digest("hex");
 }
 
-function deliver(image: Buffer): string {
-  const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+function stageCopy(buf: Buffer, outDir: string): string {
   mkdirSync(outDir, { recursive: true });
-  const target = join(outDir, POSTER_FILE);
-  writeFileSync(target, image);
-  const staged = readFileSync(target);
-  if (!staged.equals(image)) {
-    throw new Error(`staged file ${target} differs from ${POSTER_FILE}`);
+  const dest = join(outDir, ENTRY_NAME);
+  writeFileSync(dest, buf);
+  const back = readFileSync(dest);
+  if (sha256hex(back) !== sha256hex(buf)) {
+    throw new Error("staged copy differs from the poster");
   }
-  return target;
+  return dest;
 }
 
 function main(): void {
-  const image = readStoredPoster();
-  checkPoster(image);
-  const target = deliver(image);
-  console.log(
-    `wrote ${target}: ${image.length} bytes, sha256 ${fingerprint(image)}`,
-  );
+  const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+  const buf = readEntry();
+  const { w, h } = checkPng(buf);
+  const sha = sha256hex(buf);
+  const dest = stageCopy(buf, outDir);
+  console.log(`poster ${w}x${h} ${buf.length} bytes sha256 ${sha}`);
+  console.log(`staged ${dest} (round-trip verified)`);
 }
 
 main();
